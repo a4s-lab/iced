@@ -246,6 +246,9 @@ web-time = "1.1"
 wgpu = { version = "29", default-features = false, features = ["std", "wgsl"] }
 winit = { git = "https://github.com/iced-rs/winit.git", rev = "05b8ff17a06562f0a10bb46e6eaacbe2a95cb5ed", default-features = false, features = ["rwh_06"] }
 
+[patch.crates-io]
+cosmic-text = { git = "https://github.com/a4s-lab/cosmic-text.git", rev = "070e3135c2d3782d89f8710245009ef5cf74ffd9" }
+
 [workspace.lints.rust]
 rust_2018_idioms = { level = "deny", priority = -1 }
 missing_docs = "deny"
