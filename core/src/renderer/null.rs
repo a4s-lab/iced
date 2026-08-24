@@ -160,6 +160,7 @@ impl text::Paragraph for () {
 
 impl text::Editor for () {
     type Font = Font;
+    type Buffer = ();
 
     fn with_text(_text: &str) -> Self {}
 
@@ -239,6 +240,14 @@ impl text::Editor for () {
 
     fn font(&self) -> Self::Font {
         Self::Font::default()
+    }
+
+    fn with_buffer<T>(&self, inspect: impl FnOnce(&Self::Buffer) -> T) -> T {
+        inspect(self)
+    }
+
+    fn with_buffer_mut<T>(&mut self, update: impl FnOnce(&mut Self::Buffer) -> T) -> T {
+        update(self)
     }
 }
 

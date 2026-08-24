@@ -39,6 +39,17 @@ impl Editor {
         buffer_from_editor(&self.internal().editor)
     }
 
+    /// Runs the given closure with mutable access to the buffer of the [`Editor`].
+    pub fn with_buffer_mut<T>(&mut self, update: impl FnOnce(&mut cosmic_text::Buffer) -> T) -> T {
+        self.with_internal_mut(|internal| {
+            let result = update(buffer_mut_from_editor(&mut internal.editor));
+
+            internal.topmost_line_changed = Some(0);
+
+            result
+        })
+    }
+
     /// Creates a [`Weak`] reference to the [`Editor`].
     ///
     /// This is useful to avoid cloning the [`Editor`] when
@@ -83,6 +94,7 @@ impl Editor {
 
 impl editor::Editor for Editor {
     type Font = Font;
+    type Buffer = cosmic_text::Buffer;
 
     fn with_text(text: &str) -> Self {
         let mut buffer = cosmic_text::Buffer::new_empty(cosmic_text::Metrics {
@@ -892,6 +904,14 @@ impl editor::Editor for Editor {
 
     fn font(&self) -> Self::Font {
         self.internal().font
+    }
+
+    fn with_buffer<T>(&self, inspect: impl FnOnce(&Self::Buffer) -> T) -> T {
+        inspect(Editor::buffer(self))
+    }
+
+    fn with_buffer_mut<T>(&mut self, update: impl FnOnce(&mut Self::Buffer) -> T) -> T {
+        Editor::with_buffer_mut(self, update)
     }
 }
 

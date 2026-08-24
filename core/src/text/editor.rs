@@ -20,6 +20,9 @@ pub trait Editor: Sized + Default {
     /// The font of the [`Editor`].
     type Font: Copy + PartialEq + Default;
 
+    /// The buffer of the [`Editor`].
+    type Buffer: ?Sized;
+
     /// Creates a new [`Editor`] laid out with the given text.
     fn with_text(text: &str) -> Self;
 
@@ -117,6 +120,12 @@ pub trait Editor: Sized + Default {
 
     /// Returns the current [`LineHeight`] of the [`Editor`].
     fn line_height(&self) -> LineHeight;
+
+    /// Runs the given closure with access to the buffer of the [`Editor`].
+    fn with_buffer<T>(&self, inspect: impl FnOnce(&Self::Buffer) -> T) -> T;
+
+    /// Runs the given closure with mutable access to the buffer of the [`Editor`].
+    fn with_buffer_mut<T>(&mut self, update: impl FnOnce(&mut Self::Buffer) -> T) -> T;
 }
 
 /// An interaction with an [`Editor`].

@@ -48,7 +48,6 @@ use crate::core::{
 };
 
 use std::borrow::Cow;
-use std::cell::Ref;
 use std::cell::RefCell;
 use std::fmt;
 use std::ops::DerefMut;
@@ -713,15 +712,21 @@ where
     pub fn is_empty(&self) -> bool {
         self.0.borrow().editor.is_empty()
     }
-}
 
-impl<R> Content<R>
-where
-    R: text::Renderer<Editor = crate::graphics::text::Editor>,
-{
-    /// Returns read-only access to the underlying cosmic-text buffer.
-    pub fn buffer(&self) -> Ref<'_, crate::graphics::text::cosmic_text::Buffer> {
-        Ref::map(self.0.borrow(), |internal| internal.editor.buffer())
+    /// Runs the given closure with access to the buffer of the [`Content`].
+    pub fn with_buffer<T>(
+        &self,
+        inspect: impl FnOnce(&<R::Editor as editor::Editor>::Buffer) -> T,
+    ) -> T {
+        self.0.borrow().editor.with_buffer(inspect)
+    }
+
+    /// Runs the given closure with mutable access to the buffer of the [`Content`].
+    pub fn with_buffer_mut<T>(
+        &mut self,
+        update: impl FnOnce(&mut <R::Editor as editor::Editor>::Buffer) -> T,
+    ) -> T {
+        self.0.get_mut().editor.with_buffer_mut(update)
     }
 }
 
