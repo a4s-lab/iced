@@ -696,9 +696,35 @@ where
         Some(self.line(0)?.ending)
     }
 
+    /// Returns the current boundaries of the [`Content`].
+    pub fn bounds(&self) -> Size {
+        self.0.borrow().editor.bounds()
+    }
+
+    /// Returns the minimum boundaries to fit the current text in the [`Content`].
+    pub fn min_bounds(&self) -> Size {
+        self.0.borrow().editor.min_bounds()
+    }
+
     /// Returns whether or not the the [`Content`] is empty.
     pub fn is_empty(&self) -> bool {
         self.0.borrow().editor.is_empty()
+    }
+
+    /// Runs the given closure with access to the buffer of the [`Content`].
+    pub fn with_buffer<T>(
+        &self,
+        inspect: impl FnOnce(&<R::Editor as editor::Editor>::Buffer) -> T,
+    ) -> T {
+        self.0.borrow().editor.with_buffer(inspect)
+    }
+
+    /// Runs the given closure with mutable access to the buffer of the [`Content`].
+    pub fn with_buffer_mut<T>(
+        &mut self,
+        update: impl FnOnce(&mut <R::Editor as editor::Editor>::Buffer) -> T,
+    ) -> T {
+        self.0.get_mut().editor.with_buffer_mut(update)
     }
 }
 

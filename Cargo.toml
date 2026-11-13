@@ -246,6 +246,9 @@ web-time = "1.1"
 wgpu = { version = "30", default-features = false, features = ["std", "wgsl"] }
 winit = { git = "https://github.com/iced-rs/winit.git", rev = "48116469f15d3bc52b5e56bb516694be8882870d", default-features = false, features = ["rwh_06"] }
 
+[patch."https://github.com/hecrj/cosmic-text.git"]
+cosmic-text = { git = "https://github.com/a4s-lab/cosmic-text.git", rev = "f7c0bc7462dd378ab0be220a6fad01b0c363036c" }
+
 [workspace.lints.rust]
 rust_2018_idioms = { level = "deny", priority = -1 }
 missing_docs = "deny"
