@@ -32,7 +32,9 @@ use crate::core::text;
 use crate::core::time::{Duration, Instant};
 use crate::core::widget::{self, Widget};
 use crate::core::window;
-use crate::core::{Element, Event, Length, Pixels, Point, Rectangle, Shell, Size, Vector};
+use crate::core::{
+    Alignment, Element, Event, Length, Pixels, Point, Rectangle, Shell, Size, Vector,
+};
 
 /// An element to display a widget over another.
 ///
@@ -338,6 +340,7 @@ where
                 content_bounds,
                 tooltip_size,
                 self.gap,
+                Alignment::Center,
                 cursor_position,
                 viewport,
                 self.snap_within_viewport,

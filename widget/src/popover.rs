@@ -54,7 +54,7 @@ use crate::core::overlay;
 use crate::core::renderer;
 use crate::core::touch;
 use crate::core::widget::{self, Widget};
-use crate::core::{Event, Length, Pixels, Point, Rectangle, Shell, Size, Vector};
+use crate::core::{Alignment, Event, Length, Pixels, Point, Rectangle, Shell, Size, Vector};
 
 /// A floating piece of content that appears over another element.
 ///
@@ -106,6 +106,7 @@ pub struct Popover<W, V, Message> {
     popup: Option<V>,
     position: Position,
     gap: f32,
+    alignment: Alignment,
     snap_within_viewport: bool,
     on_close: Option<Message>,
 }
@@ -128,6 +129,7 @@ impl<W, V, Message> Popover<W, V, Message> {
             popup,
             position: Position::default(),
             gap: 0.0,
+            alignment: Alignment::Center,
             snap_within_viewport: true,
             on_close: None,
         }
@@ -158,7 +160,16 @@ impl<W, V, Message> Popover<W, V, Message> {
         self
     }
 
-    /// Sets whether the [`Popover`] is snapped within the viewport.
+    /// Sets the [`Alignment`] of the [`Popover`] along the side of the content
+    /// it appears on.
+    ///
+    /// By default, the [`Popover`] is centered on the content.
+    pub fn align(mut self, alignment: impl Into<Alignment>) -> Self {
+        self.alignment = alignment.into();
+        self
+    }
+
+    /// Sets whether the [`Popover`] is snapped within the window.
     pub fn snap_within_viewport(mut self, snap: bool) -> Self {
         self.snap_within_viewport = snap;
         self
@@ -174,6 +185,7 @@ impl<W, V, Message> Popover<W, Opaque<V>, Message> {
             popup: self.popup.map(Opaque::into_inner),
             position: self.position,
             gap: self.gap,
+            alignment: self.alignment,
             snap_within_viewport: self.snap_within_viewport,
             on_close: self.on_close,
         }
@@ -335,7 +347,9 @@ where
             self.content
                 .overlay(base, layout, renderer, viewport, translation, window);
 
-        let viewport = *viewport + translation;
+        // The popup is shown over the whole window, even when the content is
+        // in a smaller viewport, such as a scrollable.
+        let viewport = Rectangle::with_size(window);
 
         if let (Some(popup), Some(popup_tree)) = (self.popup.as_mut(), popup_tree) {
             let state = tree.state.downcast_mut::<State>();
@@ -367,6 +381,7 @@ where
                 content_bounds,
                 popup_size,
                 self.gap,
+                self.alignment,
                 Point::ORIGIN,
                 viewport,
                 self.snap_within_viewport,

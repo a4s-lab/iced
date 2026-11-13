@@ -1,4 +1,4 @@
-use crate::core::{Point, Rectangle, Size};
+use crate::core::{Alignment, Point, Rectangle, Size};
 
 /// The position of a popup (a popover or a tooltip) relative to the element
 /// it is anchored to.
@@ -37,6 +37,8 @@ impl Position {
     /// space in which the popup is laid out. The `content_bounds` describe
     /// the element the popup is anchored to, `popup` is the size of the
     /// popup itself, and `gap` is the amount of space to leave around it.
+    /// The `alignment` aligns the popup with the side of the element it
+    /// appears on.
     ///
     /// The `cursor_position` is only used when the [`Position`] is
     /// [`Position::FollowCursor`], and the `viewport` is only used when it is
@@ -47,6 +49,7 @@ impl Position {
         content_bounds: Rectangle,
         popup: Size,
         gap: f32,
+        alignment: Alignment,
         cursor_position: Point,
         viewport: Rectangle,
         snap_within_viewport: bool,
@@ -61,12 +64,12 @@ impl Position {
             // with the most available space otherwise.
             Position::Auto { preference } => {
                 Side::with_most_available_space(content_bounds, viewport, popup, gap, *preference)
-                    .offset(content_bounds, popup, gap)
+                    .offset(content_bounds, popup, gap, alignment)
             }
-            Position::Top => Side::Top.offset(content_bounds, popup, gap),
-            Position::Bottom => Side::Bottom.offset(content_bounds, popup, gap),
-            Position::Left => Side::Left.offset(content_bounds, popup, gap),
-            Position::Right => Side::Right.offset(content_bounds, popup, gap),
+            Position::Top => Side::Top.offset(content_bounds, popup, gap, alignment),
+            Position::Bottom => Side::Bottom.offset(content_bounds, popup, gap, alignment),
+            Position::Left => Side::Left.offset(content_bounds, popup, gap, alignment),
+            Position::Right => Side::Right.offset(content_bounds, popup, gap, alignment),
         };
 
         let mut rectangle = Rectangle {
@@ -76,18 +79,16 @@ impl Position {
             height: popup.height,
         };
 
+        // A popup larger than the viewport is snapped to its start.
         if snap_within_viewport {
-            if rectangle.x < viewport.x {
-                rectangle.x = viewport.x;
-            } else if viewport.x + viewport.width < rectangle.x + rectangle.width {
-                rectangle.x = viewport.x + viewport.width - rectangle.width;
-            }
-
-            if rectangle.y < viewport.y {
-                rectangle.y = viewport.y;
-            } else if viewport.y + viewport.height < rectangle.y + rectangle.height {
-                rectangle.y = viewport.y + viewport.height - rectangle.height;
-            }
+            rectangle.x = rectangle
+                .x
+                .min(viewport.x + viewport.width - rectangle.width)
+                .max(viewport.x);
+            rectangle.y = rectangle
+                .y
+                .min(viewport.y + viewport.height - rectangle.height)
+                .max(viewport.y);
         }
 
         rectangle
@@ -156,15 +157,26 @@ impl Side {
         }
     }
 
-    fn offset(self, content_bounds: Rectangle, popup: Size, gap: f32) -> Point {
-        let x_center = content_bounds.x + (content_bounds.width - popup.width) / 2.0;
-        let y_center = content_bounds.y + (content_bounds.height - popup.height) / 2.0;
+    fn offset(
+        self,
+        content_bounds: Rectangle,
+        popup: Size,
+        gap: f32,
+        alignment: Alignment,
+    ) -> Point {
+        let align = |start: f32, length: f32, size: f32| match alignment {
+            Alignment::Start => start,
+            Alignment::Center => start + (length - size) / 2.0,
+            Alignment::End => start + length - size,
+        };
+        let x = align(content_bounds.x, content_bounds.width, popup.width);
+        let y = align(content_bounds.y, content_bounds.height, popup.height);
 
         match self {
-            Side::Top => Point::new(x_center, content_bounds.y - popup.height - gap),
-            Side::Bottom => Point::new(x_center, content_bounds.y + content_bounds.height + gap),
-            Side::Left => Point::new(content_bounds.x - popup.width - gap, y_center),
-            Side::Right => Point::new(content_bounds.x + content_bounds.width + gap, y_center),
+            Side::Top => Point::new(x, content_bounds.y - popup.height - gap),
+            Side::Bottom => Point::new(x, content_bounds.y + content_bounds.height + gap),
+            Side::Left => Point::new(content_bounds.x - popup.width - gap, y),
+            Side::Right => Point::new(content_bounds.x + content_bounds.width + gap, y),
         }
     }
 }
@@ -172,7 +184,7 @@ impl Side {
 #[cfg(test)]
 mod tests {
     use super::{Position, Side};
-    use crate::core::{Point, Rectangle, Size};
+    use crate::core::{Alignment, Point, Rectangle, Size};
 
     /// Common inputs: a 50x50 base at the origin, an 80x80 popup, no gap, a
     /// cursor at the origin, and a 1000x1000 viewport.
@@ -191,7 +203,7 @@ mod tests {
             preference: Side::Bottom,
         };
 
-        let rect = position.resolve(base, POPUP, GAP, CURSOR, VIEWPORT, false);
+        let rect = position.resolve(base, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -210,7 +222,7 @@ mod tests {
             preference: Side::Bottom,
         };
 
-        let rect = position.resolve(BASE, popup, GAP, CURSOR, VIEWPORT, false);
+        let rect = position.resolve(BASE, popup, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -221,7 +233,8 @@ mod tests {
 
     #[test]
     fn top_places_the_popup_above_the_base() {
-        let rect = Position::Top.resolve(BASE, POPUP, GAP, CURSOR, VIEWPORT, false);
+        let rect =
+            Position::Top.resolve(BASE, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -232,7 +245,8 @@ mod tests {
 
     #[test]
     fn bottom_places_the_popup_below_the_base() {
-        let rect = Position::Bottom.resolve(BASE, POPUP, GAP, CURSOR, VIEWPORT, false);
+        let rect =
+            Position::Bottom.resolve(BASE, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -243,7 +257,8 @@ mod tests {
 
     #[test]
     fn left_places_the_popup_left_of_the_base() {
-        let rect = Position::Left.resolve(BASE, POPUP, GAP, CURSOR, VIEWPORT, false);
+        let rect =
+            Position::Left.resolve(BASE, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -254,7 +269,8 @@ mod tests {
 
     #[test]
     fn right_places_the_popup_right_of_the_base() {
-        let rect = Position::Right.resolve(BASE, POPUP, GAP, CURSOR, VIEWPORT, false);
+        let rect =
+            Position::Right.resolve(BASE, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, false);
 
         assert_eq!(
             rect,
@@ -268,7 +284,15 @@ mod tests {
         let cursor = Point::new(200.0, 300.0);
 
         // The popup's bottom edge is placed at the cursor.
-        let rect = Position::FollowCursor.resolve(BASE, POPUP, GAP, cursor, VIEWPORT, false);
+        let rect = Position::FollowCursor.resolve(
+            BASE,
+            POPUP,
+            GAP,
+            Alignment::Center,
+            cursor,
+            VIEWPORT,
+            false,
+        );
 
         assert_eq!(
             rect,
@@ -282,7 +306,8 @@ mod tests {
         // Without snapping, `Top` places the popup at (-15, -80), outside of
         // the viewport; with snapping, it is clamped to the viewport's
         // origin.
-        let rect = Position::Top.resolve(BASE, POPUP, GAP, CURSOR, VIEWPORT, true);
+        let rect =
+            Position::Top.resolve(BASE, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, true);
 
         assert_eq!(
             rect,
@@ -299,7 +324,8 @@ mod tests {
         // Without snapping, `Right` places the popup at (1000, -15), beyond
         // the right edge of the viewport; with snapping, it is shifted back
         // so it fits.
-        let rect = Position::Right.resolve(base, POPUP, GAP, CURSOR, VIEWPORT, true);
+        let rect =
+            Position::Right.resolve(base, POPUP, GAP, Alignment::Center, CURSOR, VIEWPORT, true);
 
         assert_eq!(
             rect,
